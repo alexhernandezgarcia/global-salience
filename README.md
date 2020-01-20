@@ -1,1 +1,1 @@
-# global-salience
+# Global visual salience of competing stimuli
