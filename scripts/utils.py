@@ -345,7 +345,7 @@ def get_is_new(data_df):
     # - 4: new new
     data_df.loc[:, 'old_new_comb'] = 0
     data_df.loc[(data_df.left_is_new == True) & 
-                (data_df.right_is_new == False), 'old_new_comb'] = 2
+                (data_df.right_is_new == False), 'old_new_comb'] = 1
     data_df.loc[(data_df.left_is_new == False) & 
                 (data_df.right_is_new == False), 'old_new_comb'] = 2
     data_df.loc[(data_df.left_is_new == False) & 
