@@ -67,7 +67,7 @@ def load_data(filename, mat_variable_name='', output_csv=None,
                     'duration': 'int32'})
 
     if output_csv:
-        data_df.to_csv(output_csv)
+        data_df.to_csv(output_csv, index_col=0)
 
     return data_df
 
@@ -405,7 +405,7 @@ def filter_by_first_fixation(data_df, valid=True):
 
     Parameters
     ----------
-    data_dict : DataFrame
+    data_df : DataFrame
         pandas DataFrame containing the dataset
 
     valid : bool
@@ -413,8 +413,8 @@ def filter_by_first_fixation(data_df, valid=True):
 
     Returns
     -------
-    filtered_dict : dict
-        Updated data dictionary
+    data_df : DataFrame
+        Updated DataFrame
     """
     # Compute first the attentional engagement (time until fixating away)
     engagement = []
@@ -444,9 +444,79 @@ def filter_by_first_fixation(data_df, valid=True):
         data_df = data_df.loc[(data_df.fix == 2) & (data_df.valid == True), :]
     else:
         data_df = data_df.loc[(data_df.fix == 2), :]
+    data_df = data_df.drop(['fix'], axis=1)
 
     # Add engagement data
     data_df.loc[:, 'engagement'] = engagement
+
+    return data_df
+
+
+def filter_by_time(data_df):
+    """
+    Keep only one data point per pair of images and subject, retrieving new
+    information regarding the time every side (left/right) is fixated. New keys
+    are:
+
+        time_left : time that the left image is fixated divided by the total
+        duration of the pair
+
+        time_right : time that the right image is fixated divided by the total
+        duration of the pair
+
+        longer_left : 1 if the left image was fixated longer, 0 otherwise
+
+        longer_right : 1 if the right image was fixated longer, 0 otherwise
+
+    Other possibly relevant and meaningful keys are included, whereas those
+    specific to particular fixations are not included anymore.
+
+    Parameters
+    ----------
+    data_df : DataFrame
+        pandas DataFrame containing the dataset
+
+    Returns
+    -------
+    data_df : DataFrame
+        Updated DataFrame
+    """
+    for idx in tqdm(data_df.idx_trial_subj.unique()):
+        df_idx = data_df.loc[
+                (data_df.idx_trial_subj == idx) & (data_df.fix >= 2),
+                ['is_left', 'is_right', 'duration', 'fix']]
+
+        time_total = float(df_idx.duration.sum())
+        time_left = np.divide(
+                df_idx.loc[df_idx.is_left == True]['duration'].sum(),
+                time_total)
+        time_right = np.divide(
+                df_idx.loc[df_idx.is_right == True]['duration'].sum(),
+                time_total)
+        avg_dur_left = df_idx.loc[df_idx.is_left == True]['duration'].mean()
+
+        avg_dur_right = df_idx.loc[df_idx.is_right == True]['duration'].mean()
+        data_df.loc[data_df.idx_trial_subj == idx, 'time_left'] = time_left
+        data_df.loc[data_df.idx_trial_subj == idx, 'time_right'] = time_right
+        data_df.loc[data_df.idx_trial_subj == idx,
+                    'longer_left'] = time_left > time_right
+        data_df.loc[data_df.idx_trial_subj == idx,
+                    'longer_right'] =  time_right > time_left
+        data_df.loc[data_df.idx_trial_subj == idx,
+                'avg_dur_left'] = avg_dur_left
+        data_df.loc[data_df.idx_trial_subj == idx,
+                'avg_dur_right'] = avg_dur_right
+        data_df.loc[data_df.idx_trial_subj == idx,
+                    'longer_avg_dur_left'] = avg_dur_left > avg_dur_right
+        data_df.loc[data_df.idx_trial_subj == idx,
+                    'longer_avg_dur_right'] =  avg_dur_right > avg_dur_left
+
+    # Keep only one data point per trial/subj and remove irrelevant columns
+    data_df = data_df.loc[data_df.fix == 2, :]
+    data_df = data_df.drop(['duration', 'start_lefteye', 'end_lefteye',
+        'x_lefteye', 'y_lefteye', 'pupil_lefteye', 'start_righteye',
+        'end_righteye', 'x_righteye', 'y_righteye', 'pupil_righteye', 'start',
+        'end', 'x', 'y', 'pupil', 'fix', 'is_left', 'is_right'], axis=1)
 
     return data_df
 
