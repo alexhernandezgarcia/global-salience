@@ -1,3 +1,12 @@
+"""
+Utils for the PairwiseComparisonsScorer
+
+Author: Alex Hernandez-Garcia
+        alexhernandezgarcia.github.io
+
+Last reviewed: 12 February 2020
+"""
+
 import scipy.io as sio
 import numpy as np
 import pandas as pd
@@ -19,7 +28,7 @@ def load_data(filename, mat_variable_name='', output_csv=None,
         Path to the data file
 
     mat_variable_name : str
-        Name of the variable to be retrieved as data from the .mat file. If 
+        Name of the variable to be retrieved as data from the .mat file. If
         not specified, the first variable of the file is used.
 
     output_csv : str
@@ -73,7 +82,7 @@ def mat2df(input_mat, variable_name=''):
         Path to the MATLAB .mat file
 
     variable_name : str
-        Name of the variable to be retrieved as data from the .mat file. If 
+        Name of the variable to be retrieved as data from the .mat file. If
         not specified, the first variable of the file is used.
 
     Returns
@@ -152,7 +161,7 @@ def delete_nan(data_df):
     return data_df.dropna(axis=0, subset=['x', 'y']).copy()
 
 
-def get_valid(data_df, screen_width=3840, screen_height=2160, 
+def get_valid(data_df, screen_width=3840, screen_height=2160,
               gap_pct=160.0/2560.0, force=False):
     """
     Add a new column to indicate the validity of the fixations. Valid fixations
@@ -185,28 +194,28 @@ def get_valid(data_df, screen_width=3840, screen_height=2160,
     """
     if 'valid' in data_df and not force:
         return data_df
-    
+
     if 'duration' not in data_df:
         data_df = get_duration(data_df)
     duration_mean = data_df.duration.mean()
     duration_std = data_df.duration.std()
-    
+
     # Gap coordinates
     gap = round(gap_pct * screen_width)
     max_x_left = np.divide((screen_width - gap), 2)
     min_x_right = max_x_left + gap
-    
+
     # Conditions for validity:
     #   - Fixation location must be within the limits of the screen
     #   - Fixation location must not be beyond the gap between the images
     #   - Fixation duration must be longer than 50 ms
-    #   - Fixation duration must be within 2 sigmas of the mean duration 
+    #   - Fixation duration must be within 2 sigmas of the mean duration
     data_df.loc[:, 'valid'] = False
-    data_df.loc[(data_df.y >= 0) & (data_df.y <= screen_height) & 
-                (((data_df.x >= 0) & (data_df.x <= max_x_left)) | 
+    data_df.loc[(data_df.y >= 0) & (data_df.y <= screen_height) &
+                (((data_df.x >= 0) & (data_df.x <= max_x_left)) |
                  ((data_df.x >= min_x_right) & (data_df.x <= screen_width))) &
-                (data_df.duration >= 50) & 
-                (data_df.duration < duration_mean + 2 * duration_std), 
+                (data_df.duration >= 50) &
+                (data_df.duration < duration_mean + 2 * duration_std),
                 'valid'] = True
 
     return data_df
@@ -235,13 +244,13 @@ def get_fixation_side(data_df, screen_width=3840):
     data_df.loc[data_df.x <= screen_width / 2, 'is_left'] = True
     data_df.loc[:, 'is_right'] = False
     data_df.loc[data_df.x > screen_width / 2, 'is_right'] = True
-    
+
     return data_df
 
 
 def get_idx_trial_subj(data_df):
     """
-    Add a new column that assigns every data point (fixation) of the same pair 
+    Add a new column that assigns every data point (fixation) of the same pair
     of images and subject a unique identifier. New column is:
         idx_trial_subj : unique identifier of every pair of images and subject
 
@@ -257,9 +266,9 @@ def get_idx_trial_subj(data_df):
     """
     data_df.loc[:, 'idx_trial_subj'] = None
     for idx, (trial, subj) in enumerate(
-		tqdm(itertools.product(data_df.trial.unique(), 
+		tqdm(itertools.product(data_df.trial.unique(),
                                        data_df.subject_index.unique()))):
-        data_df.loc[(data_df.trial == trial) & 
+        data_df.loc[(data_df.trial == trial) &
                     (data_df.subject_index == subj), 'idx_trial_subj'] = idx
 
     return data_df
@@ -310,12 +319,12 @@ def get_is_new(data_df):
     data_df : DataFrame
         Updated DataFrame
     """
-    
+
     data_df.loc[:, 'left_is_new'] = False
     data_df.loc[:, 'right_is_new'] = False
 
     for subj in tqdm(data_df.subject_index.unique()):
-        
+
         id_trial_subj = data_df.loc[
                 (data_df.subject_index == subj)]['idx_trial_subj'].unique()
 
@@ -325,7 +334,7 @@ def get_is_new(data_df):
             if data_df.loc[
                     data_df.idx_trial_subj == idx]['image_left'].iloc[0] \
                             not in images_seen:
-                data_df.loc[data_df.idx_trial_subj == idx, 
+                data_df.loc[data_df.idx_trial_subj == idx,
                             'left_is_new'] = True
                 images_seen.append(data_df.loc[
                     data_df.idx_trial_subj == idx]['image_left'].iloc[0])
@@ -333,24 +342,24 @@ def get_is_new(data_df):
             if data_df.loc[
                     data_df.idx_trial_subj == idx]['image_right'].iloc[0] \
                             not in images_seen:
-                data_df.loc[data_df.idx_trial_subj == idx, 
+                data_df.loc[data_df.idx_trial_subj == idx,
                             'right_is_new'] = True
                 images_seen.append(data_df.loc[
                     data_df.idx_trial_subj == idx]['image_right'].iloc[0])
-                
+
     # Add column with old/new combination to facilitate indexing
     # - 1: new old
     # - 2: old old
     # - 3: old new
     # - 4: new new
     data_df.loc[:, 'old_new_comb'] = 0
-    data_df.loc[(data_df.left_is_new == True) & 
+    data_df.loc[(data_df.left_is_new == True) &
                 (data_df.right_is_new == False), 'old_new_comb'] = 1
-    data_df.loc[(data_df.left_is_new == False) & 
+    data_df.loc[(data_df.left_is_new == False) &
                 (data_df.right_is_new == False), 'old_new_comb'] = 2
-    data_df.loc[(data_df.left_is_new == False) & 
+    data_df.loc[(data_df.left_is_new == False) &
                 (data_df.right_is_new == True), 'old_new_comb'] = 3
-    data_df.loc[(data_df.left_is_new == True) & 
+    data_df.loc[(data_df.left_is_new == True) &
                 (data_df.right_is_new == True), 'old_new_comb'] = 4
 
     return data_df
@@ -358,7 +367,7 @@ def get_is_new(data_df):
 
 def get_categories(data_df, categories_yml):
     """
-    Add new columns to indicate the image category of the left and right 
+    Add new columns to indicate the image category of the left and right
     images.
 
     Parameters
@@ -374,16 +383,70 @@ def get_categories(data_df, categories_yml):
     data_df : DataFrame
         Updated DataFrame
     """
-    
+
     with open(categories_yml, 'r') as f:
         categories_dict = yaml.load(f, Loader=yaml.FullLoader)
-        
+
         data_df.loc[:, 'category_left'] = None
         data_df.loc[:, 'category_right'] = None
-        
+
         for k, v in categories_dict.items():
             if k != 'ambiguous':
                 data_df.loc[data_df.image_left.isin(v), 'category_left'] = k
                 data_df.loc[data_df.image_right.isin(v), 'category_right'] = k
-                
+
     return data_df
+
+
+def filter_by_first_fixation(data_df, valid=True):
+    """
+    Keep only the data points corresponding to the first fixations of each pair
+    of images and subjects. The attentional engagement is also computed.
+
+    Parameters
+    ----------
+    data_dict : DataFrame
+        pandas DataFrame containing the dataset
+
+    valid : bool
+        Specifies whether only the trials marked as 'valid' must be used.
+
+    Returns
+    -------
+    filtered_dict : dict
+        Updated data dictionary
+    """
+    # Compute first the attentional engagement (time until fixating away)
+    engagement = []
+    for idx in tqdm(data_df.idx_trial_subj.unique()):
+        df_idx = data_df.loc[
+                (data_df.idx_trial_subj == idx) & (data_df.fix >= 2),
+                ['is_left', 'duration', 'valid', 'fix']]
+
+        if valid and len(df_idx.loc[(df_idx.fix == 2) &
+                                    (df_idx.valid == True)]) == 0:
+            continue
+
+        n_fix_on_first = 0
+        for is_left in df_idx.is_left:
+            if is_left == df_idx.is_left.iloc[0]:
+                n_fix_on_first += 1
+
+        # If not all the fixations of the sequence are valid, then the
+        # engagement of the trial is not computed (-1)
+        df_engagement = df_idx.iloc[:n_fix_on_first, :]
+        if valid and df_engagement.valid.all():
+            engagement.append(df_engagement.duration.sum())
+        else: engagement.append(-1)
+
+    # Keep only first fixation
+    if valid:
+        data_df = data_df.loc[(data_df.fix == 2) & (data_df.valid == True), :]
+    else:
+        data_df = data_df.loc[(data_df.fix == 2), :]
+
+    # Add engagement data
+    data_df.loc[:, 'engagement'] = engagement
+
+    return data_df
+
