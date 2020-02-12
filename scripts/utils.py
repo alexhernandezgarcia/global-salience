@@ -67,7 +67,7 @@ def load_data(filename, mat_variable_name='', output_csv=None,
                     'duration': 'int32'})
 
     if output_csv:
-        data_df.to_csv(output_csv, index_col=0)
+        data_df.to_csv(output_csv, index_label='index')
 
     return data_df
 
@@ -510,6 +510,61 @@ def filter_by_time(data_df):
                     'longer_avg_dur_left'] = avg_dur_left > avg_dur_right
         data_df.loc[data_df.idx_trial_subj == idx,
                     'longer_avg_dur_right'] =  avg_dur_right > avg_dur_left
+
+    # Keep only one data point per trial/subj and remove irrelevant columns
+    data_df = data_df.loc[data_df.fix == 2, :]
+    data_df = data_df.drop(['duration', 'start_lefteye', 'end_lefteye',
+        'x_lefteye', 'y_lefteye', 'pupil_lefteye', 'start_righteye',
+        'end_righteye', 'x_righteye', 'y_righteye', 'pupil_righteye', 'start',
+        'end', 'x', 'y', 'pupil', 'fix', 'is_left', 'is_right'], axis=1)
+
+    return data_df
+
+
+def filter_by_num_fixations(data_df):
+    """
+    Keep only one data point per pair of images and subject, retrieving new
+    information regarding the number of fixations every side (left/right)
+    received. New keys are:
+
+        pct_left : number of fixations that the left image received
+        divided by the total number of fixations of the pair
+
+        pct_right : number of fixations that the right image received
+        divided by the total number of fixations of the pair
+
+        more_left : 1 if the left image was fixated more times, 0 otherwise
+
+        more_right : 1 if the right image was fixated more times, 0 otherwise
+
+    Other possibly relevant and meaningful keys are included, whereas those
+    specific to particular fixations are not included anymore.
+
+    Parameters
+    ----------
+    data_df : DataFrame
+        pandas DataFrame containing the dataset
+
+    Returns
+    -------
+    data_df : DataFrame
+        Updated DataFrame
+    """
+    for idx in tqdm(data_df.idx_trial_subj.unique()):
+        df_idx = data_df.loc[
+                (data_df.idx_trial_subj == idx) & (data_df.fix >= 2),
+                ['is_left', 'is_right', 'fix']]
+
+        n_fix_total = len(df_idx)
+        pct_left = np.divide(df_idx.is_left.sum(), n_fix_total)
+        pct_right = np.divide(df_idx.is_right.sum(), n_fix_total)
+
+        data_df.loc[data_df.idx_trial_subj == idx, 'pct_left'] = pct_left
+        data_df.loc[data_df.idx_trial_subj == idx, 'pct_right'] = pct_right
+        data_df.loc[data_df.idx_trial_subj == idx,
+                    'more_left'] = pct_left > pct_right
+        data_df.loc[data_df.idx_trial_subj == idx,
+                    'more_right'] = pct_right > pct_left
 
     # Keep only one data point per trial/subj and remove irrelevant columns
     data_df = data_df.loc[data_df.fix == 2, :]
