@@ -14,6 +14,9 @@ from utils import load_data
 from utils import filter_by_first_fixation, filter_by_time
 from utils import filter_by_num_fixations
 
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import GridSearchCV
+
 
 class PairwiseComparisonsScorer:
     """
@@ -340,4 +343,53 @@ class PairwiseComparisonsScorer:
             raise ValueError('Please specify a valid target type')
 
         return x_matrix, y
+
+
+    @staticmethod
+    def train_cv_log_reg(x_matrix, y, cv):
+        """
+        Trains a logistic regression classifier by cross-validating the C
+        parameter through grid search
+
+        Parameters
+        ----------
+        x_matrix : {array-like, sparse matrix}
+            Design matrix
+
+        y: array-like
+            Target labels
+
+        cv: int or an iterable
+            Determines the cross-validation strategy. If integer, it will be
+            the number of folds; if iterable, it will be some previously
+            defined partitions.
+
+        Returns
+        -------
+        gscv: GridSearchCV object
+            GridSearchCV object that contains all the details of the training
+            and cross-validation process
+
+        See
+        ---
+        scikit-learn.org
+
+            LogisticRegression : https://scikit-learn.org/stable/modules/ ...
+                generated/sklearn.linear_model.LogisticRegression.html
+
+            GridSearchCV : https://scikit-learn.org/stable/modules/ ...
+                generated/sklearn.model_selection.GridSearchCV.html
+        """
+        # Range of C
+        min_c_pow = -3
+        max_c_pow = 3
+        num_c = 10
+        c_range = np.logspace(min_c_pow, max_c_pow, num=num_c)
+        parameters = {'C': c_range}
+
+        log_reg = LogisticRegression(fit_intercept=False, max_iter=500)
+        gscv = GridSearchCV(log_reg, parameters, cv=cv, scoring='roc_auc')
+        gscv.fit(x_matrix, y)
+
+        return gscv
 
