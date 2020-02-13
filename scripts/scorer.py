@@ -16,6 +16,7 @@ from utils import filter_by_num_fixations
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import train_test_split
 
 
 class PairwiseComparisonsScorer:
@@ -392,4 +393,92 @@ class PairwiseComparisonsScorer:
         gscv.fit(x_matrix, y)
 
         return gscv
+
+
+    def tr_tt_split(self, test_pct):
+        """
+        Performs a train/test split without taking into account that data come
+        from different subjects
+
+        Parameters
+        ----------
+        test_pct: float [0, 1]
+            Percentage of examples in the test set.
+
+        Returns
+        -------
+        x_tr : {array-like, sparse matrix}
+            Design matrix of the train set
+
+        x_tt : {array-like, sparse matrix}
+            Design matrix of the test set
+
+        y_tr : array-like
+            Target labels of the train set
+
+        y_tt : array-like
+            Target labels of the test set
+
+        subj_tr : list
+            List of subject indices of the train set
+        """
+        if self.subject_aware:
+            n_subj_tr = int(np.ceil((1 - test_pct) * self.n_subj))
+
+            rand_subj = np.random.permutation(self.subjects)
+
+            subj_tr = rand_subj[:n_subj_tr]
+            subj_tt = rand_subj[n_subj_tr:]
+
+            idx_tr = self.data_df.loc[
+                    data_df.subject_index.isin(subj_tr)].index
+            idx_tt = self.data_df.loc[
+                    data_df.subject_index.isin(subj_tt)].index
+
+            x_tr = self.x_matrix[idx_tr, :]
+            x_tt = self.x_matrix[idx_tt, :]
+            y_tr = self.y[idx_tr]
+            y_tt = self.y[idx_tt]
+        else:
+            x_tr, x_tt, y_tr, y_tt = train_test_split(
+                    self.x_matrix, self.y, test_size=test_pct)
+            subj_tr = self.subjects
+
+        return x_tr, x_tt, y_tr, y_tt, subj_tr
+
+
+    def subj_aware_cv_partitions(self, subjects):
+        """
+        Retrieves the train/val cross-validation partitions given a number of
+        folds
+
+        Parameters
+        ----------
+        subjects : list
+            Indices of the subjects that are available for creating the
+            partitions
+
+        Returns
+        -------
+        partitions: list of tuples
+            List of tuples that contain the arrays with the tr/val indices of
+            the partitions
+        """
+
+        n_subj_val = int(np.ceil(np.divide(float(len(subjects)),
+                                           self.val_folds)))
+        rand_subj = np.random.permutation(subjects)
+
+        subj_val = []
+        subj_tr = []
+        for i in range(self.val_folds):
+            subj_val.append(
+                    rand_subj[i * n_subj_val:n_subj_val + i * n_subj_val])
+            subj_tr.append(
+                    np.r_[rand_subj[:i * n_subj_val],
+                          rand_subj[n_subj_val + i * n_subj_val:]])
+
+        partitions = zip(subj_tr, subj_val)
+
+        return partitions
 
