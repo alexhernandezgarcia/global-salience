@@ -57,14 +57,17 @@ def load_data(filename, mat_variable_name='', output_csv=None,
         data_df = get_all_keys(data_df, categories_yml)
 
     # Set correct dtypes
-    data_df.astype({'fix': 'int32',
-                    'start': 'int32',
-                    'end': 'int32',
-                    'start_lefteye': 'int32',
-                    'end_lefteye': 'int32',
-                    'start_righteye': 'int32',
-                    'end_righteye': 'int32',
-                    'duration': 'int32'})
+    dtypes_dict = {'fix': 'int32',
+                   'start': 'int32',
+                   'end': 'int32',
+                   'start_lefteye': 'int32',
+                   'end_lefteye': 'int32',
+                   'start_righteye': 'int32',
+                   'end_righteye': 'int32',
+                   'duration': 'int32'}
+    for k, v in dtypes_dict.items():
+        if k in data_df:
+            data_df.astype({k: v})
 
     if output_csv:
         data_df.to_csv(output_csv, index_label='index')
