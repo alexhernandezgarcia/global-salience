@@ -464,6 +464,33 @@ class PairwiseComparisonsScorer:
             List of tuples that contain the arrays with the tr/val indices of
             the partitions
         """
+        def check_partitions(partitions):
+            """
+            Check if the target variable contains 2 and only 2 different labels
+            in both the train and the validation partitions
+
+            Parameters
+            ----------
+            partitions : list of tuples
+                List of tuples that contain the arrays with the tr/val indices
+                of the partitions
+
+            Returns
+            -------
+            bool
+            """
+            for p in partitions:
+
+                idx_tr = p[0]
+                idx_val = p[1]
+
+                y_tr = self.y[idx_tr]
+                y_val = self.y[idx_val]
+
+                if (len(np.unique(y_tr)) != 2) | (len(np.unique(y_val)) != 2):
+                    return False
+
+            return True
 
         n_subj_val = int(np.ceil(np.divide(float(len(subjects)),
                                            self.val_folds)))
@@ -480,5 +507,9 @@ class PairwiseComparisonsScorer:
 
         partitions = zip(subj_tr, subj_val)
 
-        return partitions
+        if check_partitions(partitions):
+            return partitions
+        else:
+            partitions = subj_aware_cv_partitions(subjects)
+
 
