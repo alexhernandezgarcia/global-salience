@@ -17,7 +17,9 @@ from utils import filter_by_num_fixations
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_auc_score, log_loss, roc_curve
 
+import matplotlib.pyplot as plt
 
 class PairwiseComparisonsScorer:
     """
@@ -241,7 +243,7 @@ class PairwiseComparisonsScorer:
         else:
             raise NotImplementedError('filter_type can be first_fix, time or '\
                                       'num_fixations')
-        
+
         # Reset index
         data_df_filtered.reset_index(drop=True, inplace=True)
 
@@ -271,15 +273,15 @@ class PairwiseComparisonsScorer:
         if self.bias_type == 'none':
             x_matrix = np.zeros([self.n_trials, self.n_img])
         elif self.bias_type == 'global':
-            x_matrix = np.c_[np.zeros([self.n_trials, self.n_img]), 
+            x_matrix = np.c_[np.zeros([self.n_trials, self.n_img]),
                              np.ones([self.n_trials, 1])]
         elif self.bias_type == 'subject':
-            x_matrix = np.c_[np.zeros([self.n_trials, self.n_img]), 
+            x_matrix = np.c_[np.zeros([self.n_trials, self.n_img]),
                              np.zeros([self.n_trials, self.n_subj])]
         else:
             raise NotImplementedError()
 
-        # Task bias 
+        # Task bias
         if self.task_bias:
             # bias term:
             # target: 1 if target right, -1 if target left, 0 otherwise
@@ -288,21 +290,21 @@ class PairwiseComparisonsScorer:
             # target on the left
             # - sel new (block 2) & new on left (old_new_comb 1)
             x_matrix[self.data_df.loc[
-                (self.data_df.block == 2) & 
-                (self.data_df.old_new_comb == 1)].index.tolist()] = -1 
+                (self.data_df.block == 2) &
+                (self.data_df.old_new_comb == 1)].index.tolist()] = -1
             # - sel old (block 3) & old on left (old_new_comb 3)
             x_matrix[self.data_df.loc[
-                (self.data_df.block == 3) & 
-                (self.data_df.old_new_comb == 3)].index.tolist()] = -1 
+                (self.data_df.block == 3) &
+                (self.data_df.old_new_comb == 3)].index.tolist()] = -1
             # target on the right
             # - sel old (block 3) & old on right (old_new_comb 1)
             x_matrix[self.data_df.loc[
-                (self.data_df.block == 3) & 
-                (self.data_df.old_new_comb == 1)].index.tolist()] = 1 
+                (self.data_df.block == 3) &
+                (self.data_df.old_new_comb == 1)].index.tolist()] = 1
             # - sel new (block 2) & new on right (old_new_comb 3)
             x_matrix[self.data_df.loc[
-                (self.data_df.block == 2) & 
-                (self.data_df.old_new_comb == 3)].index.tolist()] = 1 
+                (self.data_df.block == 2) &
+                (self.data_df.old_new_comb == 3)].index.tolist()] = 1
 
         # Familiarity bias
         if self.familiarity_bias:
@@ -431,9 +433,9 @@ class PairwiseComparisonsScorer:
             subj_tt = rand_subj[n_subj_tr:]
 
             idx_tr = self.data_df.loc[
-                    data_df.subject_index.isin(subj_tr)].index
+                    self.data_df.subject_index.isin(subj_tr)].index
             idx_tt = self.data_df.loc[
-                    data_df.subject_index.isin(subj_tt)].index
+                    self.data_df.subject_index.isin(subj_tt)].index
 
             x_tr = self.x_matrix[idx_tr, :]
             x_tt = self.x_matrix[idx_tt, :]
@@ -492,24 +494,211 @@ class PairwiseComparisonsScorer:
 
             return True
 
-        n_subj_val = int(np.ceil(np.divide(float(len(subjects)),
-                                           self.val_folds)))
+        n_val = int(np.ceil(np.divide(float(len(subjects)), self.val_folds)))
         rand_subj = np.random.permutation(subjects)
 
         subj_val = []
         subj_tr = []
         for i in range(self.val_folds):
-            subj_val.append(
-                    rand_subj[i * n_subj_val:n_subj_val + i * n_subj_val])
-            subj_tr.append(
-                    np.r_[rand_subj[:i * n_subj_val],
-                          rand_subj[n_subj_val + i * n_subj_val:]])
+            subj_val.append(rand_subj[i * n_val:n_val + i * n_val].tolist())
+            subj_tr.append(np.r_[rand_subj[:i * n_val],
+                                 rand_subj[n_val + i * n_val:]].tolist())
 
-        partitions = zip(subj_tr, subj_val)
+        partitions = list(zip(subj_tr, subj_val))
 
         if check_partitions(partitions):
             return partitions
         else:
-            partitions = subj_aware_cv_partitions(subjects)
+            print('Invalid partitions')
+            return self.subj_aware_cv_partitions(subjects)
 
+
+    def kfold_evaluation(self, test_pct=0.2, test_folds=10, do_print=True):
+        """
+        Trains a logistic regression classifier on the eye-tracking data and
+        the corresponding target variable and evaluates the performance through
+        K-fold cross-evaluation, that is by creating K folds of training and
+        held out test data.
+
+        Parameters
+        ----------
+        test_pct : float [0, 1]
+            Percentage of subjects in the test set.
+
+        test_folds : int
+            Number of random partitions of train/test sets in order the
+            evaluate the performance
+
+        do_print : bool
+            If True, print a summary of the performance
+
+        Returns
+        -------
+        self
+        """
+        def get_evaluation_metrics(estimator, x_tr, x_tt, y_tr, y_tt,
+                                   dict_metrics, fold):
+            """
+            Computes a set of performance metrics from an estimator on a fold
+            of train and test data.
+
+            Parameters
+            ----------
+            estimator : sklearn Model
+                The model to evaluate
+
+            x_tr : array-like
+                Train data
+
+            x_tt : array-like
+                Test data
+
+            y_tr : array-like
+                Train target
+
+            y_tt : array-like
+                Test target
+
+            dict_metrics : dict
+                A dictionary initialized with the keys of the performance
+                metrics
+
+            fold : int
+                The index of the fold, for accessing the arrays of the
+                dictionary
+
+            display: bool
+                Determines whether the results should be displayed or not
+
+            Returns
+            -------
+            self
+            """
+            y_tr_pred_prob = estimator.predict_proba(x_tr)
+            y_tt_pred_prob = estimator.predict_proba(x_tt)
+
+            # Accuracy
+            dict_metrics['accuracy_tr'][fold] = estimator.score(x_tr, y_tr)
+            dict_metrics['accuracy_tt'][fold] = estimator.score(x_tt, y_tt)
+
+            # AUC
+            dict_metrics['auc_tr'][fold] = roc_auc_score(
+                    y_tr, y_tr_pred_prob[:, 1])
+            dict_metrics['auc_tt'][fold] = roc_auc_score(
+                    y_tt, y_tt_pred_prob[:, 1])
+
+            # R2
+            dict_metrics['r2tjur_tr'][fold] = \
+                    np.mean(y_tr_pred_prob[y_tr == 1], axis=0)[1] - \
+                    np.mean(y_tr_pred_prob[y_tr == 0], axis=0)[1]
+            dict_metrics['r2tjur_tt'][fold] = \
+                    np.mean(y_tt_pred_prob[y_tt == 1], axis=0)[1] - \
+                    np.mean(y_tt_pred_prob[y_tt == 0], axis=0)[1]
+
+            # Log Loss
+            dict_metrics['logloss_tr'][fold] = log_loss(y_tr, y_tr_pred_prob)
+            dict_metrics['logloss_tt'][fold] = log_loss(y_tt, y_tt_pred_prob)
+
+            # Bayesian information criterion
+            dict_metrics['bic_tr'][fold] = \
+                    -2 * np.sum(np.log(y_tr_pred_prob[:, 1])) + \
+                    x_tr.shape[1] * np.log(x_tr.shape[0])
+            dict_metrics['bic_tt'][fold] = \
+                    -2 * np.sum(np.log(y_tt_pred_prob[:, 1])) + \
+                    x_tt.shape[1] * np.log(x_tt.shape[0])
+
+            # Akaike information criterion
+            dict_metrics['aic_tr'][fold] = \
+                    -2 * np.sum(np.log(y_tr_pred_prob[:, 1])) + \
+                    2 * x_tr.shape[1]
+            dict_metrics['aic_tt'][fold] =  \
+                    -2 * np.sum(np.log(y_tt_pred_prob[:, 1])) + \
+                    2 * x_tt.shape[1]
+
+            return dict_metrics
+
+        def print_performance_metrics(dict_metrics):
+            print('Training accuracy: {:.4f} (std = {:.4f})'.format(
+                np.mean(dict_metrics['accuracy_tr']),
+                np.std(dict_metrics['accuracy_tr'])))
+            print('Test accuracy: {:.4f} (std = {:.4f})'.format(
+                self.accuracy_mean, self.accuracy_std))
+            print
+            print('Training AUC: {:.4f} (std = {:.4f})'.format(
+                np.mean(dict_metrics['auc_tr']),
+                np.std(dict_metrics['auc_tr'])))
+            print('Test AUC: {:.4f} (std = {:.4f})'.format(
+                self.AUC_mean, self.AUC_std))
+            print
+            print('Training R2 (Tjur): {:.4f} (std = {:.4f})'.format(
+                np.mean(dict_metrics['r2tjur_tr']),
+                np.std(dict_metrics['r2tjur_tr'])))
+            print('Test R2 (Tjur): {:.4f} (std = {:.4f})'.format(
+                self.r2_mean, self.r2_std))
+            print
+            print('Training log loss: {:.4f} (std = {:.4f})'.format(
+                np.mean(dict_metrics['logloss_tr']),
+                np.std(dict_metrics['logloss_tr'])))
+            print('Test log loss: {:.4f} (std = {:.4f})'.format(
+                self.log_loss_mean, self.log_loss_std))
+            print
+            print('Training BIC: {:.4f} (std = {:.4f})'.format(
+                np.mean(dict_metrics['bic_tr']),
+                np.std(dict_metrics['bic_tr'])))
+            print('Test BIC: {:.4f} (std = {:.4f})'.format(
+                self.bic_mean, self.bic_std))
+            print
+            print('Training AIC: {:.4f} (std = {:.4f})'.format(
+                np.mean(dict_metrics['aic_tr']),
+                np.std(dict_metrics['aic_tr'])))
+            print('Test AIC: {:.4f} (std = {:.4f})'.format(
+                self.aic_mean, self.aic_std))
+
+        # Check target
+        if not self.target in ['first', 'longer', 'longer_avg_dur', 'more']:
+            raise NotImplementedError(
+                'Logistic regression classification can only be ' \
+                'trained with binary targets: first, longer, '
+                'longer_avg_dur, more')
+
+        # Initialize dictionary of performance metrics
+        metrics = ['accuracy_tr', 'accuracy_tt', 'auc_tr', 'auc_tt',
+                   'r2tjur_tr', 'r2tjur_tt', 'logloss_tr', 'logloss_tt',
+                   'bic_tr', 'bic_tt', 'aic_tr', 'aic_tt']
+        dict_metrics = {k: np.zeros(test_folds) for k in metrics}
+
+        for fold in range(test_folds):
+
+            x_tr, x_tt, y_tr, y_tt, subj_tr = self.tr_tt_split(test_pct)
+            if self.subject_aware:
+                cv = self.subj_aware_cv_partitions(subj_tr)
+                gscv = self.train_cv_log_reg(self.x_matrix, self.y, cv)
+            else:
+                cv = self.val_folds
+                gscv = self.train_cv_log_reg(x_tr, y_tr, cv)
+
+            estimator = gscv.best_estimator_
+
+            # Compute performance metrics and update dictionary
+            dict_metrics = get_evaluation_metrics(estimator, x_tr, x_tt, y_tr,
+                                                  y_tt, dict_metrics, fold)
+
+        # Compute mean and standard deviation of metrics across the folds
+        self.accuracy_mean = np.mean(dict_metrics['accuracy_tt'])
+        self.accuracy_std = np.std(dict_metrics['accuracy_tt'])
+        self.AUC_mean = np.mean(dict_metrics['auc_tt'])
+        self.AUC_std = np.std(dict_metrics['auc_tt'])
+        self.r2_mean = np.mean(dict_metrics['r2tjur_tt'])
+        self.r2_std = np.std(dict_metrics['r2tjur_tt'])
+        self.log_loss_mean = np.mean(dict_metrics['logloss_tt'])
+        self.log_loss_std = np.std(dict_metrics['logloss_tt'])
+        self.bic_mean = np.mean(dict_metrics['bic_tt'])
+        self.bic_std = np.std(dict_metrics['bic_tt'])
+        self.aic_mean = np.mean(dict_metrics['aic_tt'])
+        self.aic_std = np.std(dict_metrics['aic_tt'])
+
+        if do_print:
+            print_performance_metrics(dict_metrics)
+
+        return self
 
