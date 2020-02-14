@@ -4,7 +4,7 @@ Pairwise Comparisons Scorer
 Author: Alex Hernandez-Garcia
         alexhernandezgarcia.github.io
 
-Last reviewed: 13 February 2020
+Last reviewed: 14 February 2020
 """
 
 import numpy as np
@@ -121,10 +121,10 @@ class PairwiseComparisonsScorer:
         accuracy_std : float
             Standard deviation of the accuracy on test
 
-        AUC_mean : float
+        auc_mean : float
             Mean AUC on test
 
-        AUC_std : float
+        auc_std : float
             Standard deviation of the AUC on test
 
         r2_mean : float
@@ -172,8 +172,8 @@ class PairwiseComparisonsScorer:
         self.scores_scaled = None
         self.accuracy_mean = None
         self.accuracy_std = None
-        self.AUC_mean = None
-        self.AUC_std = None
+        self.auc_mean = None
+        self.auc_std = None
         self.r2_mean = None
         self.r2_std = None
         self.log_loss_mean = None
@@ -628,7 +628,7 @@ class PairwiseComparisonsScorer:
                 np.mean(dict_metrics['auc_tr']),
                 np.std(dict_metrics['auc_tr'])))
             print('Test AUC: {:.4f} (std = {:.4f})'.format(
-                self.AUC_mean, self.AUC_std))
+                self.auc_mean, self.auc_std))
             print
             print('Training R2 (Tjur): {:.4f} (std = {:.4f})'.format(
                 np.mean(dict_metrics['r2tjur_tr']),
@@ -686,8 +686,8 @@ class PairwiseComparisonsScorer:
         # Compute mean and standard deviation of metrics across the folds
         self.accuracy_mean = np.mean(dict_metrics['accuracy_tt'])
         self.accuracy_std = np.std(dict_metrics['accuracy_tt'])
-        self.AUC_mean = np.mean(dict_metrics['auc_tt'])
-        self.AUC_std = np.std(dict_metrics['auc_tt'])
+        self.auc_mean = np.mean(dict_metrics['auc_tt'])
+        self.auc_std = np.std(dict_metrics['auc_tt'])
         self.r2_mean = np.mean(dict_metrics['r2tjur_tt'])
         self.r2_std = np.std(dict_metrics['r2tjur_tt'])
         self.log_loss_mean = np.mean(dict_metrics['logloss_tt'])
