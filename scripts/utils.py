@@ -215,10 +215,10 @@ def get_valid(data_df, screen_width=3840, screen_height=2160,
     #   - Fixation duration must be within 2 sigmas of the mean duration
     data_df.loc[:, 'valid'] = False
     data_df.loc[(data_df.y >= 0) & (data_df.y <= screen_height) &
-                (((data_df.x >= 0) & (data_df.x <= max_x_left)) |
-                 ((data_df.x >= min_x_right) & (data_df.x <= screen_width))) &
+                (data_df.x >= 0) & (data_df.x <= screen_width) &
+                ((data_df.x <= max_x_left) | (data_df.x >= min_x_right)) & 
                 (data_df.duration >= 50) &
-                (data_df.duration < duration_mean + 2 * duration_std),
+                (data_df.duration <= duration_mean + 2 * duration_std),
                 'valid'] = True
 
     return data_df
