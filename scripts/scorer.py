@@ -509,7 +509,6 @@ class PairwiseComparisonsScorer:
         if check_partitions(partitions):
             return partitions
         else:
-            print('Invalid partitions')
             return self.subj_aware_cv_partitions(subjects)
 
 
