@@ -291,20 +291,20 @@ class PairwiseComparisonsScorer:
             # - sel new (block 2) & new on left (old_new_comb 1)
             x_matrix[self.data_df.loc[
                 (self.data_df.block == 2) &
-                (self.data_df.old_new_comb == 1)].index.tolist()] = -1
+                (self.data_df.old_new_comb == 1)].index.tolist(), -1] = -1
             # - sel old (block 3) & old on left (old_new_comb 3)
             x_matrix[self.data_df.loc[
                 (self.data_df.block == 3) &
-                (self.data_df.old_new_comb == 3)].index.tolist()] = -1
+                (self.data_df.old_new_comb == 3)].index.tolist(), -1] = -1
             # target on the right
             # - sel old (block 3) & old on right (old_new_comb 1)
             x_matrix[self.data_df.loc[
                 (self.data_df.block == 3) &
-                (self.data_df.old_new_comb == 1)].index.tolist()] = 1
+                (self.data_df.old_new_comb == 1)].index.tolist(), -1] = 1
             # - sel new (block 2) & new on right (old_new_comb 3)
             x_matrix[self.data_df.loc[
                 (self.data_df.block == 2) &
-                (self.data_df.old_new_comb == 3)].index.tolist()] = 1
+                (self.data_df.old_new_comb == 3)].index.tolist(), -1] = 1
 
         # Familiarity bias
         if self.familiarity_bias:
@@ -313,19 +313,19 @@ class PairwiseComparisonsScorer:
             x_matrix = np.c_[x_matrix, np.zeros([self.n_trials, 1])]
             # old on the left (old_new_comb 3)
             x_matrix[self.data_df.loc[
-                self.data_df.old_new_comb == 3].index.tolist()] = -1
+                self.data_df.old_new_comb == 3].index.tolist(), -1] = -1
             # old on the right (old_new_comb 1)
             x_matrix[self.data_df.loc[
-                self.data_df.old_new_comb == 1].index.tolist()] = 1
+                self.data_df.old_new_comb == 1].index.tolist(), -1] = 1
 
         # Set images shown in each trial
-        for t in range(0, self.n_trials):
-            x_matrix[t, self.data_df.iloc[t]['image_left'] - 1] = -1
-            x_matrix[t, self.data_df.iloc[t]['image_right'] - 1] = 1
+        x_matrix[self.data_df.index, self.data_df.image_left - 1] = -1
+        x_matrix[self.data_df.index, self.data_df.image_right - 1] = 1
 
-            if self.bias_type == 'subject':
-                x_matrix[t, self.n_img + np.where(self.subjects == \
-                        self.data_df.iloc[t]['subject_index'])[0]] = 1
+        # Set subject
+        if self.bias_type == 'subject':
+            x_matrix[self.data_df.index, 
+                     self.n_img + self.data_df.subject_index - 1] = 1
 
         # Target (y)
         if self.target == 'first':
