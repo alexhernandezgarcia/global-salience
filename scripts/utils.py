@@ -4,7 +4,7 @@ Utils for the PairwiseComparisonsScorer
 Author: Alex Hernandez-Garcia
         alexhernandezgarcia.github.io
 
-Last reviewed: 12 February 2020
+Last reviewed: 16 February 2020
 """
 
 import scipy.io as sio
