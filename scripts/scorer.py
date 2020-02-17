@@ -166,10 +166,15 @@ class PairwiseComparisonsScorer:
         self.n_trials = None
         self.subjects = None
 
-        self.weights = None
-        self.bias = None
-        self.scores_zscores = None
+        self.coeff_images = None
+        self.coeff_lateral = None
+        self.coeff_subjects = None
+        self.coeff_task = None
+        self.coeff_familiarity = None
+
+        self.zscores = None
         self.scores_scaled = None
+
         self.accuracy_mean = None
         self.accuracy_std = None
         self.auc_mean = None
@@ -707,4 +712,59 @@ class PairwiseComparisonsScorer:
             print_performance_metrics(dict_metrics)
 
         return self
+
+
+    def compute_scores(self):
+        """
+        Trains the model on all the available training data, obtains the
+        coefficients of the model and normalizes them to obtain useful scores
+
+        Returns
+        -------
+        self
+        """
+
+        # Define cross-validation partitions
+        if self.subject_aware:
+            cv = self.subj_aware_cv_partitions(self.subjects)
+        else:
+            cv = self.val_folds
+
+        # Train logistic regression
+        gscv = self.train_cv_log_reg(self.x_matrix, self.y, cv)
+        estimator = gscv.best_estimator_
+
+        # Get coefficients of the regression model
+        coefficients = estimator.coef_.squeeze()
+        self.coeff_images = coefficients[:self.n_img]
+
+        # Normalise
+        zscores = self.coeff_images.copy()
+        zscores -= zscores.mean()
+        self.zscores = zscores / zscores.std()
+
+        # Scale
+        scores_scaled = self.coeff_images.copy()
+        scores_scaled -= scores_scaled.min()
+        scale = scores_scaled.max() - scores_scaled.min()
+        self.scores_scaled = scores_scaled / scale
+
+        # Lateral (subject) bias
+        if self.bias_type == 'none':
+            pass
+        elif self.bias_type == 'global':
+            self.coeff_lateral = coefficients[self.n_img]
+        elif self.bias_type == 'subject':
+            self.coeff_subjects = \
+                coefficients[self.n_img:self.n_img + self.n_subj]
+        else:
+            raise NotImplementedError()
+
+        if self.familiarity_bias:
+            self.coeff_familiarity = coefficients[-1]
+            if self.task_bias:
+                self.coeff_task = coefficients[-2]
+        else:
+            if self.task_bias:
+                self.coeff_task = coefficients[-1]
 
