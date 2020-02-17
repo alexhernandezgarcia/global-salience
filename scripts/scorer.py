@@ -9,6 +9,7 @@ Last reviewed: 16 February 2020
 
 import numpy as np
 import pandas as pd
+from random import shuffle
 
 from utils import load_data
 from utils import filter_by_first_fixation, filter_by_time
@@ -511,7 +512,8 @@ class PairwiseComparisonsScorer:
             return self.subj_aware_cv_partitions(subjects)
 
 
-    def kfold_evaluation(self, test_pct=0.2, test_folds=10, do_print=True):
+    def kfold_evaluation(self, test_pct=0.2, test_folds=10,
+                         shuffle_labels=False, do_print=True):
         """
         Trains a logistic regression classifier on the eye-tracking data and
         the corresponding target variable and evaluates the performance through
@@ -669,7 +671,12 @@ class PairwiseComparisonsScorer:
         for fold in range(test_folds):
 
             x_tr, x_tt, y_tr, y_tt, subj_tr = self.tr_tt_split(test_pct)
-            if self.subject_aware:
+
+            # Compute random baseline
+            if shuffle_labels:
+                shuffle(y_tr.values)
+
+            if self.subject_aware and not shuffle_labels:
                 cv = self.subj_aware_cv_partitions(subj_tr)
                 gscv = self.train_cv_log_reg(self.x_matrix, self.y, cv)
             else:
