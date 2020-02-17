@@ -19,7 +19,6 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score, log_loss, roc_curve
 
-import matplotlib.pyplot as plt
 
 class PairwiseComparisonsScorer:
     """
@@ -622,36 +621,37 @@ class PairwiseComparisonsScorer:
                 np.std(dict_metrics['accuracy_tr'])))
             print('Test accuracy: {:.4f} (std = {:.4f})'.format(
                 self.accuracy_mean, self.accuracy_std))
-            print
+            print('')
             print('Training AUC: {:.4f} (std = {:.4f})'.format(
                 np.mean(dict_metrics['auc_tr']),
                 np.std(dict_metrics['auc_tr'])))
             print('Test AUC: {:.4f} (std = {:.4f})'.format(
                 self.auc_mean, self.auc_std))
-            print
+            print('')
             print('Training R2 (Tjur): {:.4f} (std = {:.4f})'.format(
                 np.mean(dict_metrics['r2tjur_tr']),
                 np.std(dict_metrics['r2tjur_tr'])))
             print('Test R2 (Tjur): {:.4f} (std = {:.4f})'.format(
                 self.r2_mean, self.r2_std))
-            print
+            print('')
             print('Training log loss: {:.4f} (std = {:.4f})'.format(
                 np.mean(dict_metrics['logloss_tr']),
                 np.std(dict_metrics['logloss_tr'])))
             print('Test log loss: {:.4f} (std = {:.4f})'.format(
                 self.log_loss_mean, self.log_loss_std))
-            print
+            print('')
             print('Training BIC: {:.4f} (std = {:.4f})'.format(
                 np.mean(dict_metrics['bic_tr']),
                 np.std(dict_metrics['bic_tr'])))
             print('Test BIC: {:.4f} (std = {:.4f})'.format(
                 self.bic_mean, self.bic_std))
-            print
+            print('')
             print('Training AIC: {:.4f} (std = {:.4f})'.format(
                 np.mean(dict_metrics['aic_tr']),
                 np.std(dict_metrics['aic_tr'])))
             print('Test AIC: {:.4f} (std = {:.4f})'.format(
                 self.aic_mean, self.aic_std))
+            print('')
 
         # Check target
         if not self.target in ['first', 'longer', 'longer_avg_dur', 'more']:
