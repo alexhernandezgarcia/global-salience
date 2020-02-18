@@ -4,7 +4,7 @@ Utils for the PairwiseComparisonsScorer
 Author: Alex Hernandez-Garcia
         alexhernandezgarcia.github.io
 
-Last reviewed: 16 February 2020
+Last reviewed: 18 February 2020
 """
 
 import scipy.io as sio
@@ -452,6 +452,10 @@ def filter_by_first_fixation(data_df, valid=True):
     # Add engagement data
     data_df.loc[:, 'engagement'] = engagement
 
+    # Remove irrelevant columns
+    data_df = data_df.drop(['start_lefteye', 'end_lefteye', 'x_lefteye',
+        'y_lefteye', 'pupil_lefteye', 'start_righteye', 'end_righteye',
+        'x_righteye', 'y_righteye', 'pupil_righteye'], axis=1)
     return data_df
 
 
