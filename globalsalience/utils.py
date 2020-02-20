@@ -37,6 +37,9 @@ def load_data(filename, mat_variable_name='', output_csv=None,
     get_all_data : bool
         Specifies if the additional keys must be incorporated to the dictionary.
 
+    categories_yml : str
+        Path to the YAML file that specifies the category of each image
+
     Returns
     -------
     data_df : dict
@@ -69,7 +72,7 @@ def load_data(filename, mat_variable_name='', output_csv=None,
             data_df.astype({k: v})
 
     if output_csv:
-        data_df.to_csv(output_csv, index_label='index', index=False)
+        data_df.to_csv(output_csv)
 
     return data_df
 
@@ -160,7 +163,11 @@ def delete_nan(data_df):
     data_df : DataFrame
         Updated DataFrame
     """
-    return data_df.dropna(axis=0, subset=['x', 'y']).copy()
+    data_df = data_df.dropna(axis=0, subset=['x', 'y']).copy()
+    data_df.reset_index(drop=True, inplace=True)
+
+    return data_df
+
 
 
 def get_valid(data_df, screen_width=3840, screen_height=2160,
