@@ -20,8 +20,11 @@ The complete data sets of this project are available on the [Supplementary mater
 
 2. Install the package
 **pip**
+
 Inside the directory:
+
 `pip install -e .`
+
 3. Try some of the [examples](./examples)
 
 ### Citation
