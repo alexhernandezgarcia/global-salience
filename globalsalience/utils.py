@@ -51,7 +51,7 @@ def load_data(filename, mat_variable_name='', output_csv=None,
     if filename[-4:] == '.mat':
         data_df = mat2df(filename, mat_variable_name)
     elif filename[-4:] == '.csv':
-        data_df = pd.read_csv(filename)
+        data_df = pd.read_csv(filename, index_col='index')
     else:
         raise IOError('The filename must have a .mat or .p extension')
 
@@ -72,7 +72,7 @@ def load_data(filename, mat_variable_name='', output_csv=None,
             data_df.astype({k: v})
 
     if output_csv:
-        data_df.to_csv(output_csv)
+        data_df.to_csv(output_csv, index_label='index')
 
     return data_df
 
