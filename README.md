@@ -13,6 +13,17 @@ The complete data sets of this project are available on the [Supplementary mater
 * [`data_firstfixation.csv`](https://osf.io/8g2zp/): A derived data set containing data relative to the first fixations at each trial. Also available in this repository (`./data/data_firstfixation.csv`)
 * [`categories.yml`](https://osf.io/8kcey/): A [YAML](https://yaml.org/) file mapping the image index with their categories. Also available in this repository (`./data/categories.csv`)
 
+### Usage
+
+1. Clone the repository:
+`git clone https://github.com/alexhernandezgarcia/global-salience.git`
+
+2. Install the package
+**pip**
+Inside the directory:
+`pip install -e .`
+3. Try some of the [examples](./examples)
+
 ### Citation
 
 If you use this code for scientific purposes, please cite:
