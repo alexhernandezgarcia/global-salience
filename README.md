@@ -16,9 +16,11 @@ The complete data sets of this project are available on the [Supplementary mater
 ### Usage
 
 1. Clone the repository:
+
 `git clone https://github.com/alexhernandezgarcia/global-salience.git`
 
 2. Install the package
+
 **pip**
 
 Inside the directory:
