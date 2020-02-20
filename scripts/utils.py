@@ -70,7 +70,7 @@ def load_data(filename, mat_variable_name='', output_csv=None,
             data_df.astype({k: v})
 
     if output_csv:
-        data_df.to_csv(output_csv, index_label='index')
+        data_df.to_csv(output_csv, index_label='index', index=False)
 
     return data_df
 
@@ -456,7 +456,7 @@ def filter_by_first_fixation(data_df, valid=True):
     data_df = data_df.drop(['start_lefteye', 'end_lefteye', 'x_lefteye',
         'y_lefteye', 'pupil_lefteye', 'start_righteye', 'end_righteye',
         'x_righteye', 'y_righteye', 'pupil_righteye'], axis=1)
-    return data_df
+    return data_df.copy()
 
 
 def filter_by_time(data_df):
@@ -525,7 +525,7 @@ def filter_by_time(data_df):
         'end_righteye', 'x_righteye', 'y_righteye', 'pupil_righteye', 'start',
         'end', 'x', 'y', 'pupil', 'fix', 'is_left', 'is_right'], axis=1)
 
-    return data_df
+    return data_df.copy()
 
 
 def filter_by_num_fixations(data_df):
@@ -580,5 +580,5 @@ def filter_by_num_fixations(data_df):
         'end_righteye', 'x_righteye', 'y_righteye', 'pupil_righteye', 'start',
         'end', 'x', 'y', 'pupil', 'fix', 'is_left', 'is_right'], axis=1)
 
-    return data_df
+    return data_df.copy()
 
