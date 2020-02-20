@@ -11,14 +11,14 @@ import numpy as np
 import pandas as pd
 from random import shuffle
 
-from utils import load_data
-from utils import filter_by_first_fixation, filter_by_time
-from utils import filter_by_num_fixations
-
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score, log_loss, roc_curve
+
+from .utils import load_data
+from .utils import filter_by_first_fixation, filter_by_time
+from .utils import filter_by_num_fixations
 
 
 class PairwiseComparisonsScorer:

@@ -42,7 +42,6 @@ def load_data(filename, mat_variable_name='', output_csv=None,
     data_df : dict
         DataFrame containing the eye-tracking data
     """
-
     if not os.path.isfile(filename):
         raise ValueError('Please provide an existing data_file')
 
