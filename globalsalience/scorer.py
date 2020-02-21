@@ -10,6 +10,7 @@ Last reviewed: 16 February 2020
 import numpy as np
 import pandas as pd
 from random import shuffle
+from tqdm import tqdm
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GridSearchCV
@@ -673,7 +674,7 @@ class PairwiseComparisonsScorer:
                    'bic_tr', 'bic_tt', 'aic_tr', 'aic_tt']
         dict_metrics = {k: np.zeros(test_folds) for k in metrics}
 
-        for fold in range(test_folds):
+        for fold in tqdm(range(test_folds)):
 
             x_tr, x_tt, y_tr, y_tt, subj_tr = self.tr_tt_split(test_pct)
 
