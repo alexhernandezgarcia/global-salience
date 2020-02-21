@@ -4,7 +4,7 @@ By [Alex Hernandez-Garcia](https://alexhernandezgarcia.github.io/), Ricardo Ramo
 
 This repository contains the code used to compute and analyse the global visual salience of natural images from eye-tracking data, as described in the paper [Global visual salience of competing stimuli](https://psyarxiv.com/z7qp5/).
 
-### Data
+## Data
 
 The complete data sets of this project are available on the [Supplementary material OSF page of the preprint](https://osf.io/t4gq9/). The following files are available:
 
@@ -13,23 +13,31 @@ The complete data sets of this project are available on the [Supplementary mater
 * [`data_firstfixation.csv`](https://osf.io/8g2zp/): A derived data set containing data relative to the first fixations at each trial. Also available in this repository (`./data/data_firstfixation.csv`)
 * [`categories.yml`](https://osf.io/8kcey/): A [YAML](https://yaml.org/) file mapping the image index with their categories. Also available in this repository (`./data/categories.csv`)
 
-### Usage
+## Usage
 
-1. Clone the repository:
+### 1. Clone the repository:
 
-`git clone https://github.com/alexhernandezgarcia/global-salience.git`
+```
+git clone https://github.com/alexhernandezgarcia/global-salience.git
+```
 
-2. Install the package
+### 2. Install the package
 
-**pip**
+#### `pip`
 
-Inside the directory:
+Run the following command from inside the directory:
 
-`pip install -e .`
+```
+pip install -e .
+```
 
-3. Try some of the [examples](./examples)
+### 3. Try some of the [examples](./examples)
 
-### Citation
+```
+python ./examples/eval_dirst_fixation.py --input ./data/data_firstfixation.csv --test_pct 0.2 --test_folds 25
+```
+
+## Citation
 
 If you use this code for scientific purposes, please cite:
 
@@ -42,7 +50,7 @@ If you use this code for scientific purposes, please cite:
 		year = {2019}
 	}
 
-### License
+## License
 
 [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 
