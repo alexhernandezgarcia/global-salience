@@ -22,7 +22,7 @@ def main(argv=None):
     elif scorer.bias_type == 'global':
         columns_lateral = ['global']
     elif scorer.bias_type == 'subject':
-        columns_lateral = ['subject{:d}'.format(idx + 1) for idx 
+        columns_lateral = ['subject_{:d}'.format(idx + 1) for idx 
             in range(scorer.n_subj)]
     else:
         raise NotImplementedError()
