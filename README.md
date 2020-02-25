@@ -11,7 +11,6 @@ The complete data sets of this project are available on the [Supplementary mater
 * [`data_raw.mat`](https://osf.io/nsp3y/): The basic data set containing the eye-tracking data from the experimental sessions.
 * [`data_all.csv`](https://osf.io/exkrp/): The most complete version of the data set, containing the original data from `data_raw.mat`, as well as other useful information.
 * [`data_firstfixation.csv`](https://osf.io/8g2zp/): A derived data set containing data relative to the first fixations at each trial. Also available in this repository (`./data/data_firstfixation.csv`)
-* [`categories.yml`](https://osf.io/8kcey/): A [YAML](https://yaml.org/) file mapping the image index with their categories. Also available in this repository (`./data/categories.csv`)
 
 ## Usage
 
@@ -31,11 +30,13 @@ Run the following command from inside the directory:
 pip install -e .
 ```
 
-### 3. Try some of the [examples](./examples)
+### 3.1 Try some of the [examples](./examples)
 
 ```
 python ./examples/eval_first_fixation.py --input ./data/data_firstfixation.csv --test_pct 0.2 --test_folds 25
 ```
+
+### 3.2 Analyze the data as in the [Jupyter notebooks](./notebooks)
 
 ## Citation
 
