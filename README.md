@@ -34,7 +34,7 @@ pip install -e .
 ### 3. Try some of the [examples](./examples)
 
 ```
-python ./examples/eval_dirst_fixation.py --input ./data/data_firstfixation.csv --test_pct 0.2 --test_folds 25
+python ./examples/eval_first_fixation.py --input ./data/data_firstfixation.csv --test_pct 0.2 --test_folds 25
 ```
 
 ## Citation
