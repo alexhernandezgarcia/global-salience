@@ -12,10 +12,11 @@ import pandas as pd
 from random import shuffle
 from tqdm import tqdm
 
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score, log_loss, roc_curve
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 from .utils import load_data
 from .utils import filter_by_first_fixation, filter_by_time
@@ -182,6 +183,10 @@ class PairwiseComparisonsScorer:
         self.auc_std = None
         self.r2_mean = None
         self.r2_std = None
+        self.mse_mean = None
+        self.mse_std = None
+        self.mae_mean = None
+        self.mae_std = None
         self.log_loss_mean = None
         self.log_loss_std = None
         self.coef_det_mean = None
@@ -403,6 +408,31 @@ class PairwiseComparisonsScorer:
         return gscv
 
 
+    @staticmethod
+    def train_lin_reg(x_matrix, y):
+        """
+        Trains a linear regression model
+
+        Parameters
+        ----------
+        x_matrix : {array-like, sparse matrix}
+            Design matrix
+
+        y: array-like
+            Target labels
+
+        Returns
+        -------
+        lin_reg: LinearRegression object
+            LinearRegression object with the attributes of the trained model
+        """
+
+        lin_reg = LinearRegression(fit_intercept=False)
+        lin_reg.fit(x_matrix, y)
+
+        return lin_reg
+
+
     def tr_tt_split(self, test_pct):
         """
         Performs a train/test split without taking into account that data come
@@ -543,7 +573,7 @@ class PairwiseComparisonsScorer:
         self
         """
         def get_evaluation_metrics(estimator, x_tr, x_tt, y_tr, y_tt,
-                                   dict_metrics, fold):
+                                   dict_metrics, fold, ml_mode):
             """
             Computes a set of performance metrics from an estimator on a fold
             of train and test data.
@@ -573,105 +603,163 @@ class PairwiseComparisonsScorer:
                 The index of the fold, for accessing the arrays of the
                 dictionary
 
-            display: bool
-                Determines whether the results should be displayed or not
+            ml_mode: str
+                Either 'classification' or 'regression'
 
             Returns
             -------
             self
             """
-            y_tr_pred_prob = estimator.predict_proba(x_tr)
-            y_tt_pred_prob = estimator.predict_proba(x_tt)
+            if ml_mode == 'classification':
+                y_tr_pred_prob = estimator.predict_proba(x_tr)
+                y_tt_pred_prob = estimator.predict_proba(x_tt)
 
-            # Accuracy
-            dict_metrics['accuracy_tr'][fold] = estimator.score(x_tr, y_tr)
-            dict_metrics['accuracy_tt'][fold] = estimator.score(x_tt, y_tt)
+                # Accuracy
+                dict_metrics['accuracy_tr'][fold] = estimator.score(x_tr, y_tr)
+                dict_metrics['accuracy_tt'][fold] = estimator.score(x_tt, y_tt)
 
-            # AUC
-            dict_metrics['auc_tr'][fold] = roc_auc_score(
-                    y_tr, y_tr_pred_prob[:, 1])
-            dict_metrics['auc_tt'][fold] = roc_auc_score(
-                    y_tt, y_tt_pred_prob[:, 1])
+                # AUC
+                dict_metrics['auc_tr'][fold] = roc_auc_score(
+                        y_tr, y_tr_pred_prob[:, 1])
+                dict_metrics['auc_tt'][fold] = roc_auc_score(
+                        y_tt, y_tt_pred_prob[:, 1])
 
-            # R2
-            dict_metrics['r2tjur_tr'][fold] = \
-                    np.mean(y_tr_pred_prob[y_tr == 1], axis=0)[1] - \
-                    np.mean(y_tr_pred_prob[y_tr == 0], axis=0)[1]
-            dict_metrics['r2tjur_tt'][fold] = \
-                    np.mean(y_tt_pred_prob[y_tt == 1], axis=0)[1] - \
-                    np.mean(y_tt_pred_prob[y_tt == 0], axis=0)[1]
+                # R2
+                dict_metrics['r2tjur_tr'][fold] = \
+                        np.mean(y_tr_pred_prob[y_tr == 1], axis=0)[1] - \
+                        np.mean(y_tr_pred_prob[y_tr == 0], axis=0)[1]
+                dict_metrics['r2tjur_tt'][fold] = \
+                        np.mean(y_tt_pred_prob[y_tt == 1], axis=0)[1] - \
+                        np.mean(y_tt_pred_prob[y_tt == 0], axis=0)[1]
 
-            # Log Loss
-            dict_metrics['logloss_tr'][fold] = log_loss(y_tr, y_tr_pred_prob)
-            dict_metrics['logloss_tt'][fold] = log_loss(y_tt, y_tt_pred_prob)
+                # Log Loss
+                dict_metrics['logloss_tr'][fold] = log_loss(
+                        y_tr, y_tr_pred_prob)
+                dict_metrics['logloss_tt'][fold] = log_loss(
+                        y_tt, y_tt_pred_prob)
 
-            # Bayesian information criterion
-            dict_metrics['bic_tr'][fold] = \
-                    -2 * np.sum(np.log(y_tr_pred_prob[:, 1])) + \
-                    x_tr.shape[1] * np.log(x_tr.shape[0])
-            dict_metrics['bic_tt'][fold] = \
-                    -2 * np.sum(np.log(y_tt_pred_prob[:, 1])) + \
-                    x_tt.shape[1] * np.log(x_tt.shape[0])
+                # Bayesian information criterion
+                dict_metrics['bic_tr'][fold] = \
+                        -2 * np.sum(np.log(y_tr_pred_prob[:, 1])) + \
+                        x_tr.shape[1] * np.log(x_tr.shape[0])
+                dict_metrics['bic_tt'][fold] = \
+                        -2 * np.sum(np.log(y_tt_pred_prob[:, 1])) + \
+                        x_tt.shape[1] * np.log(x_tt.shape[0])
 
-            # Akaike information criterion
-            dict_metrics['aic_tr'][fold] = \
-                    -2 * np.sum(np.log(y_tr_pred_prob[:, 1])) + \
-                    2 * x_tr.shape[1]
-            dict_metrics['aic_tt'][fold] =  \
-                    -2 * np.sum(np.log(y_tt_pred_prob[:, 1])) + \
-                    2 * x_tt.shape[1]
+                # Akaike information criterion
+                dict_metrics['aic_tr'][fold] = \
+                        -2 * np.sum(np.log(y_tr_pred_prob[:, 1])) + \
+                        2 * x_tr.shape[1]
+                dict_metrics['aic_tt'][fold] =  \
+                        -2 * np.sum(np.log(y_tt_pred_prob[:, 1])) + \
+                        2 * x_tt.shape[1]
+
+            elif ml_mode == 'regression':
+                y_tr_pred = estimator.predict(x_tr)
+                y_tt_pred = estimator.predict(x_tt)
+
+                # R2
+                dict_metrics['r2_tr'][fold] = estimator.score(x_tr, y_tr)
+                dict_metrics['r2_tt'][fold] = estimator.score(x_tt, y_tt)
+
+                # Mean squared error
+                dict_metrics['mse_tr'][fold] = mean_squared_error(
+                        y_tr, y_tr_pred)
+                dict_metrics['mse_tt'][fold] = mean_squared_error(
+                        y_tt, y_tt_pred)
+
+                # Mean absolute error
+                dict_metrics['mae_tr'][fold] = mean_absolute_error(
+                        y_tr, y_tr_pred)
+                dict_metrics['mae_tt'][fold] = mean_absolute_error(
+                        y_tt, y_tt_pred)
+
+            else:
+                raise ValueError()
 
             return dict_metrics
 
-        def print_performance_metrics(dict_metrics):
-            print('Training accuracy: {:.4f} (std = {:.4f})'.format(
-                np.mean(dict_metrics['accuracy_tr']),
-                np.std(dict_metrics['accuracy_tr'])))
-            print('Test accuracy: {:.4f} (std = {:.4f})'.format(
-                self.accuracy_mean, self.accuracy_std))
-            print('')
-            print('Training AUC: {:.4f} (std = {:.4f})'.format(
-                np.mean(dict_metrics['auc_tr']),
-                np.std(dict_metrics['auc_tr'])))
-            print('Test AUC: {:.4f} (std = {:.4f})'.format(
-                self.auc_mean, self.auc_std))
-            print('')
-            print('Training R2 (Tjur): {:.4f} (std = {:.4f})'.format(
-                np.mean(dict_metrics['r2tjur_tr']),
-                np.std(dict_metrics['r2tjur_tr'])))
-            print('Test R2 (Tjur): {:.4f} (std = {:.4f})'.format(
-                self.r2_mean, self.r2_std))
-            print('')
-            print('Training log loss: {:.4f} (std = {:.4f})'.format(
-                np.mean(dict_metrics['logloss_tr']),
-                np.std(dict_metrics['logloss_tr'])))
-            print('Test log loss: {:.4f} (std = {:.4f})'.format(
-                self.log_loss_mean, self.log_loss_std))
-            print('')
-            print('Training BIC: {:.4f} (std = {:.4f})'.format(
-                np.mean(dict_metrics['bic_tr']),
-                np.std(dict_metrics['bic_tr'])))
-            print('Test BIC: {:.4f} (std = {:.4f})'.format(
-                self.bic_mean, self.bic_std))
-            print('')
-            print('Training AIC: {:.4f} (std = {:.4f})'.format(
-                np.mean(dict_metrics['aic_tr']),
-                np.std(dict_metrics['aic_tr'])))
-            print('Test AIC: {:.4f} (std = {:.4f})'.format(
-                self.aic_mean, self.aic_std))
-            print('')
+        def print_performance_metrics(dict_metrics, ml_mode):
+            if ml_mode == 'classification':
+                print('Training accuracy: {:.4f} (std = {:.4f})'.format(
+                    np.mean(dict_metrics['accuracy_tr']),
+                    np.std(dict_metrics['accuracy_tr'])))
+                print('Test accuracy: {:.4f} (std = {:.4f})'.format(
+                    self.accuracy_mean, self.accuracy_std))
+                print('')
+                print('Training AUC: {:.4f} (std = {:.4f})'.format(
+                    np.mean(dict_metrics['auc_tr']),
+                    np.std(dict_metrics['auc_tr'])))
+                print('Test AUC: {:.4f} (std = {:.4f})'.format(
+                    self.auc_mean, self.auc_std))
+                print('')
+                print('Training R2 (Tjur): {:.4f} (std = {:.4f})'.format(
+                    np.mean(dict_metrics['r2tjur_tr']),
+                    np.std(dict_metrics['r2tjur_tr'])))
+                print('Test R2 (Tjur): {:.4f} (std = {:.4f})'.format(
+                    self.r2_mean, self.r2_std))
+                print('')
+                print('Training log loss: {:.4f} (std = {:.4f})'.format(
+                    np.mean(dict_metrics['logloss_tr']),
+                    np.std(dict_metrics['logloss_tr'])))
+                print('Test log loss: {:.4f} (std = {:.4f})'.format(
+                    self.log_loss_mean, self.log_loss_std))
+                print('')
+                print('Training BIC: {:.4f} (std = {:.4f})'.format(
+                    np.mean(dict_metrics['bic_tr']),
+                    np.std(dict_metrics['bic_tr'])))
+                print('Test BIC: {:.4f} (std = {:.4f})'.format(
+                    self.bic_mean, self.bic_std))
+                print('')
+                print('Training AIC: {:.4f} (std = {:.4f})'.format(
+                    np.mean(dict_metrics['aic_tr']),
+                    np.std(dict_metrics['aic_tr'])))
+                print('Test AIC: {:.4f} (std = {:.4f})'.format(
+                    self.aic_mean, self.aic_std))
+                print('')
 
-        # Check target
-        if not self.target in ['first', 'longer', 'longer_avg_dur', 'more']:
-            raise NotImplementedError(
-                'Logistic regression classification can only be ' \
-                'trained with binary targets: first, longer, '
-                'longer_avg_dur, more')
+            elif ml_mode == 'regression':
+                print('Training R2 : {:.4f} (std = {:.4f})'.format(
+                    np.mean(dict_metrics['r2_tr']),
+                    np.std(dict_metrics['r2_tr'])))
+                print('Test R2 : {:.4f} (std = {:.4f})'.format(
+                    self.r2_mean, self.r2_std))
+                print('')
+                print('Training MSE: {:.4f} (std = {:.4f})'.format(
+                    np.mean(dict_metrics['mse_tr']),
+                    np.std(dict_metrics['mse_tr'])))
+                print('Test MSE: {:.4f} (std = {:.4f})'.format(
+                    self.mse_mean, self.mse_std))
+                print('Training MAE: {:.4f} (std = {:.4f})'.format(
+                    np.mean(dict_metrics['mae_tr']),
+                    np.std(dict_metrics['mae_tr'])))
+                print('Test MAE: {:.4f} (std = {:.4f})'.format(
+                    self.mae_mean, self.mae_std))
+                print('')
+
+            else:
+                raise ValueError()
 
         # Initialize dictionary of performance metrics
-        metrics = ['accuracy_tr', 'accuracy_tt', 'auc_tr', 'auc_tt',
-                   'r2tjur_tr', 'r2tjur_tt', 'logloss_tr', 'logloss_tt',
-                   'bic_tr', 'bic_tt', 'aic_tr', 'aic_tt']
+        metrics = ['auc_tr', 'auc_tt', 'r2tjur_tr', 'r2tjur_tt', 'logloss_tr',
+                   'logloss_tt', 'bic_tr', 'bic_tt', 'aic_tr', 'aic_tt']
+
+        # Check target
+        if self.target in ['first', 'longer', 'longer_avg_dur', 'more']:
+            ml_mode = 'classification'
+            metrics = ['accuracy_tr', 'accuracy_tt', 'auc_tr', 'auc_tt',
+                       'r2tjur_tr', 'r2tjur_tt', 'logloss_tr', 'logloss_tt',
+                       'bic_tr', 'bic_tt', 'aic_tr', 'aic_tt']
+        elif self.target in ['time', 'number']:
+            ml_mode = 'regression'
+            metrics = ['r2_tr', 'r2_tt', 'mse_tr', 'mse_tt', 'mae_tr', 'mae_tt']
+        else:
+            raise NotImplementedError(
+                'Logistic regression classification can only be '
+                'trained with binary targets: first, longer, '
+                'longer_avg_dur, more; Linear regression can only be '
+                'trained with scalar targets: time, number ')
+
         dict_metrics = {k: np.zeros(test_folds) for k in metrics}
 
         for fold in tqdm(range(test_folds)):
@@ -682,35 +770,57 @@ class PairwiseComparisonsScorer:
             if shuffle_labels:
                 shuffle(y_tr.values)
 
+	    # Train model
             if self.subject_aware and not shuffle_labels:
-                cv = self.subj_aware_cv_partitions(subj_tr)
-                gscv = self.train_cv_log_reg(self.x_matrix, self.y, cv)
+                if ml_mode == 'regression':
+                    estimator = self.train_lin_reg(self.x_matrix, self.y)
+                elif ml_mode == 'classification':
+                    cv = self.subj_aware_cv_partitions(subj_tr)
+                    gscv = self.train_cv_log_reg(self.x_matrix, self.y, cv)
+                    estimator = gscv.best_estimator_
+                else:
+                    raise ValueError()
             else:
-                cv = self.val_folds
-                gscv = self.train_cv_log_reg(x_tr, y_tr, cv)
-
-            estimator = gscv.best_estimator_
+                if ml_mode == 'regression':
+                    estimator = self.train_lin_reg(x_tr, y_tr)
+                elif ml_mode == 'classification':
+                    cv = self.val_folds
+                    gscv = self.train_cv_log_reg(x_tr, y_tr, cv)
+                    estimator = gscv.best_estimator_
+                else:
+                    raise ValueError()
 
             # Compute performance metrics and update dictionary
             dict_metrics = get_evaluation_metrics(estimator, x_tr, x_tt, y_tr,
-                                                  y_tt, dict_metrics, fold)
+                                                  y_tt, dict_metrics, fold,
+                                                  ml_mode)
 
         # Compute mean and standard deviation of metrics across the folds
-        self.accuracy_mean = np.mean(dict_metrics['accuracy_tt'])
-        self.accuracy_std = np.std(dict_metrics['accuracy_tt'])
-        self.auc_mean = np.mean(dict_metrics['auc_tt'])
-        self.auc_std = np.std(dict_metrics['auc_tt'])
-        self.r2_mean = np.mean(dict_metrics['r2tjur_tt'])
-        self.r2_std = np.std(dict_metrics['r2tjur_tt'])
-        self.log_loss_mean = np.mean(dict_metrics['logloss_tt'])
-        self.log_loss_std = np.std(dict_metrics['logloss_tt'])
-        self.bic_mean = np.mean(dict_metrics['bic_tt'])
-        self.bic_std = np.std(dict_metrics['bic_tt'])
-        self.aic_mean = np.mean(dict_metrics['aic_tt'])
-        self.aic_std = np.std(dict_metrics['aic_tt'])
+        if ml_mode == 'classification':
+            self.accuracy_mean = np.mean(dict_metrics['accuracy_tt'])
+            self.accuracy_std = np.std(dict_metrics['accuracy_tt'])
+            self.auc_mean = np.mean(dict_metrics['auc_tt'])
+            self.auc_std = np.std(dict_metrics['auc_tt'])
+            self.r2_mean = np.mean(dict_metrics['r2tjur_tt'])
+            self.r2_std = np.std(dict_metrics['r2tjur_tt'])
+            self.log_loss_mean = np.mean(dict_metrics['logloss_tt'])
+            self.log_loss_std = np.std(dict_metrics['logloss_tt'])
+            self.bic_mean = np.mean(dict_metrics['bic_tt'])
+            self.bic_std = np.std(dict_metrics['bic_tt'])
+            self.aic_mean = np.mean(dict_metrics['aic_tt'])
+            self.aic_std = np.std(dict_metrics['aic_tt'])
+        elif ml_mode == 'regression':
+            self.r2_mean = np.mean(dict_metrics['r2_tt'])
+            self.r2_std = np.std(dict_metrics['r2_tt'])
+            self.mse_mean = np.mean(dict_metrics['mse_tt'])
+            self.mse_std = np.std(dict_metrics['mse_tt'])
+            self.mae_mean = np.mean(dict_metrics['mae_tt'])
+            self.mae_std = np.std(dict_metrics['mae_tt'])
+        else:
+            raise ValueError()
 
         if do_print:
-            print_performance_metrics(dict_metrics)
+            print_performance_metrics(dict_metrics, ml_mode)
 
         return self
 
