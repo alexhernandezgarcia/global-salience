@@ -8,7 +8,7 @@ FLAGS = None
 def main(argv=None):
 
     # Initialize the scorer and load the first fixations data set
-    scorer = PairwiseComparisonsScorer(target='first')
+    scorer = PairwiseComparisonsScorer(target=FLAGS.target)
     scorer.load_data(FLAGS.input, compute_features=False, do_filter=False)
 
     # K-fold evaluation
@@ -28,6 +28,12 @@ if __name__ == '__main__':
         type=str,
         default='../data/data_firstfixation.csv',
         help='Path to the input file'
+    )
+    parser.add_argument(
+        '--target',
+        type=str,
+        default='first',
+        help='Keyword of the target variable'
     )
     parser.add_argument(
         '--test_pct',
