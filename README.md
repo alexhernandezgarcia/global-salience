@@ -33,7 +33,7 @@ pip install -e .
 ### 3.1 Try some of the [examples](./examples)
 
 ```
-python ./examples/eval_first_fixation.py --input ./data/data_firstfixation.csv --target first --test_pct 0.2 --test_folds 25
+python ./examples/eval.py --input ./data/data_firstfixation.csv --target first --test_pct 0.2 --test_folds 25
 ```
 
 ### 3.2 Analyze the data as in the [Jupyter notebooks](./notebooks)
