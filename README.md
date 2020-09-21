@@ -2,7 +2,7 @@
 
 By [Alex Hernandez-Garcia](https://alexhernandezgarcia.github.io/), Ricardo Ramos Gameiro, [Alessandro Grillini](https://www.rug.nl/staff/a.grillini/research) and [Peter König](https://scholar.google.com/citations?user=Ieubd0EAAAAJ&hl=en)
 
-This repository contains the code used to compute and analyse the global visual salience of natural images from eye-tracking data, as described in the paper [Global visual salience of competing stimuli](https://psyarxiv.com/z7qp5/).
+This repository contains the code used to compute and analyse the global visual salience of natural images from eye-tracking data, as described in the paper [Global visual salience of competing stimuli](https://psyarxiv.com/z7qp5/) ([Journal of Vision, 2020](https://jov.arvojournals.org/article.aspx?articleid=2770513)).
 
 ## Data
 
