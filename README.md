@@ -47,8 +47,13 @@ If you use this code for scientific purposes, please cite:
 	@article{hergar2019globalsalience,
 		author = {Hernandez-Garcia, Alex and Ramos Gameiro, Ricardo and Grillini, Alessandro and K{\"o}nig, Peter},
 		title = {Global visual salience of competing stimuli},
-		journal = {PsyArXiv preprint PsyArXiv:z7qp5},
-		year = {2019}
+		journal = {Journal of Vision},
+		year = {2020},
+		volume = {20},
+		number = {7},
+		pages = {27-27},
+		month = {07},
+		doi = {10.1167/jov.20.7.27},
 	}
 
 ## License
